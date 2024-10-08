@@ -1,12 +1,10 @@
 import cv2
 import mediapipe as mp
+import pyautogui
 
 # Import the tasks API for gesture recognition
 from mediapipe.tasks.python.vision import GestureRecognizer, GestureRecognizerOptions
 from mediapipe.tasks.python import BaseOptions
-from mediapipe.framework.formats import landmark_pb2
-
-import pyautogui
 
 # Path to the gesture recognition model
 model_path = "gesture_recognizer.task"  # Update this to the correct path where the model is saved, if not in current directory
@@ -17,6 +15,22 @@ options = GestureRecognizerOptions(
     num_hands=1
 )
 gesture_recognizer = GestureRecognizer.create_from_options(options)
+
+# Initialize MediaPipe hands module for detecting hand landmarks
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5)
+
+def detect_thumb_direction(landmarks):
+    # Thumb tip and base coordinates
+    thumb_tip = landmarks[mp_hands.HandLandmark.THUMB_TIP]
+    thumb_cmc = landmarks[mp_hands.HandLandmark.THUMB_CMC]
+
+    # Compare x-coordinates: thumb tip to thumb base
+    if thumb_tip.x < thumb_cmc.x:  # Thumb pointing left
+        return "Thumb_Left"
+    elif thumb_tip.x > thumb_cmc.x:  # Thumb pointing right
+        return "Thumb_Right"
+    return None
 
 def main():
     # Initialize video capture
@@ -31,6 +45,22 @@ def main():
         # Flip the image horizontally and convert the BGR image to RGB.
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Perform hand landmark detection
+        results = hands.process(image_rgb)
+
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                # Detect thumb direction
+                thumb_direction = detect_thumb_direction(hand_landmarks.landmark)
+
+                if thumb_direction == "Thumb_Left":
+                    pyautogui.press("left")
+                elif thumb_direction == "Thumb_Right":
+                    pyautogui.press("right")
+
+                # Draw hand landmarks on the image (optional)
+                mp.solutions.drawing_utils.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
         # Convert the image to a Mediapipe Image object for the gesture recognizer
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
