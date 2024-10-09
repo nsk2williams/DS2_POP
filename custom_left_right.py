@@ -11,9 +11,8 @@ def calculate_distance(point1, point2):
     return math.hypot(point2[0]-point1[0], point2[1]-point1[1])
 
 
-def recognize_tilt(hand_landmarks):
-    # Example: Recognize if the hand is showing a fist or open palm
-    # We'll check the distance between the tip of the thumb and the base
+def recognize_tilt_basic(hand_landmarks):
+
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
 
@@ -25,6 +24,28 @@ def recognize_tilt(hand_landmarks):
         return "BEARING RIGHT"
     else:
         return "NEITHER"
+
+
+
+def recognize_tilt(hand_landmarks, threshold_angle=30):
+
+    thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
+    thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
+
+    index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
+    pinky_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
+
+
+    angle = (math.atan((thumb_tip.y-index_knuckle.y) / (thumb_tip.x-index_knuckle.x))) * 180/3.14
+    #print("AP", round(angle_proxy))
+
+
+    if (index_knuckle.x - thumb_tip.x > 0.05) and abs(angle) < (90-threshold_angle):
+        return "LEFT" # + str(angle)
+    elif (index_knuckle.x - thumb_tip.x < -0.05) and abs(angle) < (90-threshold_angle):
+        return "RIGHT" # + str(angle)
+    else:
+        return "NEITHER" # + str(angle)
 
 
 
@@ -54,26 +75,29 @@ def main():
             results = hands.process(image_rgb)
 
             # Draw the hand annotations on the image.
-            image_rgb.flags.writeable = True
-            image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            # image_rgb.flags.writeable = True
+            # image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
-                    # Draw landmarks
-                    mp_drawing.draw_landmarks(
-                        image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
                     gesture = recognize_tilt(hand_landmarks)
                     print("Gesture:", gesture)
+
+                # for hand_landmarks in results.multi_hand_landmarks:
+                #     # Draw landmarks
+                #     mp_drawing.draw_landmarks(
+                #         image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+
                     
-                    # Display gesture near hand location
-                    cv2.putText(image, gesture, 
-                                (int(hand_landmarks.landmark[0].x * image.shape[1]), 
-                                 int(hand_landmarks.landmark[0].y * image.shape[0]) - 20),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                #     # Display gesture near hand location
+                #     cv2.putText(image, gesture, 
+                #                 (int(hand_landmarks.landmark[0].x * image.shape[1]), 
+                #                  int(hand_landmarks.landmark[0].y * image.shape[0]) - 20),
+                #                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
             # Display the resulting image
-            cv2.imshow('Gesture Recognition', image)
+            # cv2.imshow('Gesture Recognition', image)
 
             if cv2.waitKey(5) & 0xFF == 27:
                 break
