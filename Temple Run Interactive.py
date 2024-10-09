@@ -6,6 +6,8 @@ from mediapipe.tasks.python.vision import GestureRecognizer, GestureRecognizerOp
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.framework.formats import landmark_pb2
 
+from custom_left_right import recognize_tilt
+
 import pyautogui
 
 # Path to the gesture recognition model
@@ -18,55 +20,83 @@ options = GestureRecognizerOptions(
 )
 gesture_recognizer = GestureRecognizer.create_from_options(options)
 
+mp_hands = mp.solutions.hands
+
 def main():
     # Initialize video capture
     cap = cv2.VideoCapture(0)  # 0 is the default webcam
 
-    while cap.isOpened():
-        success, image = cap.read()
-        if not success:
-            print("Ignoring empty camera frame.")
-            continue
+    with mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=2,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5
+    ) as hands:
 
-        # Flip the image horizontally and convert the BGR image to RGB.
-        image = cv2.flip(image, 1)
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        while cap.isOpened():
+            success, image = cap.read()
+            if not success:
+                print("Ignoring empty camera frame.")
+                continue
 
-        # Convert the image to a Mediapipe Image object for the gesture recognizer
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
+            # Flip the image horizontally and convert the BGR image to RGB.
+            image = cv2.flip(image, 1)
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Perform gesture recognition on the image
-        result = gesture_recognizer.recognize(mp_image)
+            # Convert the image to a Mediapipe Image object for the gesture recognizer
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
+            # TODO do the ad-hoc thing simultaneously?? 
 
-        # Draw the gesture recognition results on the image
-        if result.gestures:
-            recognized_gesture = result.gestures[0][0].category_name
-            confidence = result.gestures[0][0].score
+            # Perform gesture recognition on the image
+            result = gesture_recognizer.recognize(mp_image)
 
-            # Example of pressing keys with pyautogui based on recognized gesture
-            if recognized_gesture == "Thumb_Up":
-                pyautogui.press("up")
-            elif recognized_gesture == "Thumb_Down":
-                pyautogui.press("down")
-            elif recognized_gesture == "Open_Palm":
-                pyautogui.press("left")
-            elif recognized_gesture == "Closed_Fist":
-                pyautogui.press("right")
-            elif recognized_gesture == "Victory":
-                pyautogui.press("space")
+            resultALT = hands.process(image_rgb)
 
-            # Display recognized gesture and confidence 
-            cv2.putText(image, f"Gesture: {recognized_gesture} ({confidence:.2f})", 
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            # Draw the gesture recognition results on the image
+            if result.gestures:
+                recognized_gesture = result.gestures[0][0].category_name
+                confidence = result.gestures[0][0].score
 
-        # Display the resulting image (can comment this out for better performance later on)
-        cv2.imshow('Gesture Recognition', image)
+                tilt = None
 
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
+                if resultALT.multi_hand_landmarks:
+                    for hand_landmarks in resultALT.multi_hand_landmarks:
+                        tilt = recognize_tilt(hand_landmarks, threshold_angle=30)
 
-    cap.release()
-    cv2.destroyAllWindows()
+
+                # Title only registers angles greater than treshold (e.g. 30 degrees off-center)
+                # So in practice, the tilt left/right conditionals are stricter than the thumb_up
+                # And ordered this way cover all cases, though they are judged on different mechanisms
+                if recognized_gesture == "Victory":
+                    print("space")
+                    #pyautogui.press("space")
+                
+                elif tilt == "LEFT":
+                    print("Left")
+                    #pyautogui.press("left")
+                elif tilt == "RIGHT":
+                    print("right")
+                    #pyautogui.press("right")
+                elif recognized_gesture == "Thumb_Up":
+                    print("up")
+                    #pyautogui.press("up")
+                elif recognized_gesture == "Thumb_Down":
+                    print("down")
+                    #pyautogui.press("down")
+
+
+                # Display recognized gesture and confidence 
+                cv2.putText(image, f"Gesture: {recognized_gesture} ({confidence:.2f})", 
+                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+            # Display the resulting image (can comment this out for better performance later on)
+            cv2.imshow('Gesture Recognition', image)
+
+            if cv2.waitKey(5) & 0xFF == 27:
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
