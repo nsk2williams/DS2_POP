@@ -69,20 +69,20 @@ def main():
                 # And ordered this way cover all cases, though they are judged on different mechanisms
                 if recognized_gesture == "Victory":
                     print("space")
-                    #pyautogui.press("space")
+                    pyautogui.press("space")
                 
                 elif tilt == "LEFT":
                     print("Left")
-                    #pyautogui.press("left")
+                    pyautogui.press("left")
                 elif tilt == "RIGHT":
                     print("right")
-                    #pyautogui.press("right")
+                    pyautogui.press("right")
                 elif recognized_gesture == "Thumb_Up":
                     print("up")
-                    #pyautogui.press("up")
+                    pyautogui.press("up")
                 elif recognized_gesture == "Thumb_Down":
                     print("down")
-                    #pyautogui.press("down")
+                    pyautogui.press("down")
 
 
                 # Display recognized gesture and confidence 
