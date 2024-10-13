@@ -6,7 +6,7 @@ from mediapipe.tasks.python.vision import GestureRecognizer, GestureRecognizerOp
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.framework.formats import landmark_pb2
 
-from custom_left_right import recognize_tilt
+from custom_gestures import recognize_tilt, no_action_gesture
 
 import pyautogui
 
@@ -63,7 +63,6 @@ def main():
                     for hand_landmarks in resultALT.multi_hand_landmarks:
                         tilt = recognize_tilt(hand_landmarks, threshold_angle=25)
 
-
                 # Title only registers angles greater than treshold (e.g. 30 degrees off-center)
                 # So in practice, the tilt left/right conditionals are stricter than the thumb_up
                 # And ordered this way cover all cases, though they are judged on different mechanisms
@@ -71,8 +70,9 @@ def main():
                     print("space")
                     pyautogui.press("space")
                 
-                if recognized_gesture == "Closed_Fist":
+                elif (recognized_gesture == "Closed_Fist") or  no_action_gesture(hand_landmarks):
                     print("fist")
+
 
                 elif tilt == "LEFT":
                     print("Left")
