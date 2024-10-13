@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import math
+from math import pi
 
 # Initialize Mediapipe Hands
 mp_drawing = mp.solutions.drawing_utils
@@ -27,7 +28,7 @@ def recognize_tilt_basic(hand_landmarks):
 
 
 
-def recognize_tilt(hand_landmarks, threshold_angle=30):
+def recognize_tilt_classic(hand_landmarks, threshold_angle=30):
 
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
@@ -36,7 +37,35 @@ def recognize_tilt(hand_landmarks, threshold_angle=30):
     pinky_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
 
 
-    angle = (math.atan((thumb_tip.y-index_knuckle.y) / (thumb_tip.x-index_knuckle.x))) * 180/3.14
+    angle = (math.atan((thumb_tip.y-index_knuckle.y) / (thumb_tip.x-index_knuckle.x))) * 180/pi
+    #print("AP", round(angle_proxy))
+
+
+    if (index_knuckle.x - thumb_tip.x > 0.05) and abs(angle) < (90-threshold_angle):
+        return "LEFT" # + str(angle)
+    elif (index_knuckle.x - thumb_tip.x < -0.05) and abs(angle) < (90-threshold_angle):
+        return "RIGHT" # + str(angle)
+    else:
+        return "NEITHER" # + str(angle)
+
+def recognize_tilt(hand_landmarks, threshold_angle=30):
+
+    thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
+    thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
+
+    #index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
+    
+    index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+    middle_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP]
+    ring_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_MCP]
+    pinky_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
+
+
+    avg_knuckle_x = (index_knuckle.x + middle_knuckle.x + ring_knuckle.x + pinky_knuckle.x) /4
+    avg_knuckle_y = (index_knuckle.y + middle_knuckle.y + ring_knuckle.y + pinky_knuckle.y) /4
+
+
+    angle = (math.atan((thumb_tip.y-avg_knuckle_y) / (thumb_tip.x-avg_knuckle_x))) * 180/3.14
     #print("AP", round(angle_proxy))
 
 
