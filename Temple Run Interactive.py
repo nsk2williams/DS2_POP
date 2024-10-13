@@ -61,7 +61,7 @@ def main():
 
                 if resultALT.multi_hand_landmarks:
                     for hand_landmarks in resultALT.multi_hand_landmarks:
-                        tilt = recognize_tilt(hand_landmarks, threshold_angle=30)
+                        tilt = recognize_tilt(hand_landmarks, threshold_angle=25)
 
 
                 # Title only registers angles greater than treshold (e.g. 30 degrees off-center)
@@ -71,6 +71,9 @@ def main():
                     print("space")
                     pyautogui.press("space")
                 
+                if recognized_gesture == "Closed_Fist":
+                    print("fist")
+
                 elif tilt == "LEFT":
                     print("Left")
                     pyautogui.press("left")
@@ -83,6 +86,21 @@ def main():
                 elif recognized_gesture == "Thumb_Down":
                     print("down")
                     pyautogui.press("down")
+
+                else:
+                    print("none")
+
+                """
+                Hierarchy:
+
+                victory -- na
+
+                l/r 
+
+                up/dowm [~30 degrees]
+
+
+                """
 
 
                 # Display recognized gesture and confidence 
