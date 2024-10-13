@@ -12,7 +12,13 @@ def calculate_distance(point1, point2):
     return math.hypot(point2[0]-point1[0], point2[1]-point1[1])
 
 
-def no_action_gesture(hand_landmarks):
+# A simple function to broaden the conditions under which our system will recognize a fist (our resting gesture).
+# The canned fist gesture often does not work at different angles, and especially does not work on the back of
+# the hand, which is a natural resting position between our other gestures. This function checks whether the 
+#thumb tip is touching, or very close to touching, the index knuckle. It is not a strict fist recognizer, and 
+# probably has plenty of false positives. But none of the other gestures (pause, up/down/left/right) involve 
+# putting the thumb anywhere near the index knuckle, so for our purposes, this simple heuristic is adequate. 
+def recognize_fist_flexible(hand_landmarks):
     # Extract necessary landmarks
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
@@ -23,20 +29,14 @@ def no_action_gesture(hand_landmarks):
         (index_knuckle.x, index_knuckle.y)
     )
 
-    # Check if thumb and index are close and other fingers are open
     if distance < 0.1:
-        # if (middle_tip.y < hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_PIP].y and
-        #     ring_tip.y < hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_PIP].y and
-        #     pinky_tip.y < hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_PIP].y):
         return True
+
     return False
 
 
-
-
-
+# [Depcreated] First attempt to recognize tilt: based on whether thumb tip was to left or right of index knuckle
 def recognize_tilt_basic(hand_landmarks):
-
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
 
@@ -49,8 +49,8 @@ def recognize_tilt_basic(hand_landmarks):
     else:
         return "NEITHER"
 
-
-
+# [Deprecated] Second attempt to recognize tilt: based on angle between thumb and index knuckle. Allows us to set "strictness"
+# By giving an angle threshold past which gesture will not register (e.g. 35 degress of the axis)
 def recognize_tilt_classic(hand_landmarks, threshold_angle=30):
 
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
@@ -71,25 +71,30 @@ def recognize_tilt_classic(hand_landmarks, threshold_angle=30):
     else:
         return "NEITHER" # + str(angle)
 
+
+# The same as recognize_tilt_classic, but averages the position of index, middle, ring, and pinky knuckles. 
+# When testing on different group members, we noticed that different hands have different natural shapes, and
+# some people make a thumbs up with their thumb naturally leaning in one direction. This leads to some sharply
+# "biased" angles between the index knuckle and thumb tip. Because the effect varied between different hands, 
+# we could not counteract it directly (e.g. fixing it for right handed users might worsen it for left-handed
+# users). So instead we "softened" the effect by taking a different angle, using the avreage positions of all
+# non-thumb knuckles. This, coupled with a slightly tighter range of "forgiveness" (25 degrees) produced
+# intuitive behavior which did not surprise users
 def recognize_tilt(hand_landmarks, threshold_angle=30):
 
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
-
-    #index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
     
     index_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
     middle_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP]
     ring_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_MCP]
     pinky_knuckle = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
 
-
     avg_knuckle_x = (index_knuckle.x + middle_knuckle.x + ring_knuckle.x + pinky_knuckle.x) /4
     avg_knuckle_y = (index_knuckle.y + middle_knuckle.y + ring_knuckle.y + pinky_knuckle.y) /4
 
 
     angle = (math.atan((thumb_tip.y-avg_knuckle_y) / (thumb_tip.x-avg_knuckle_x))) * 180/3.14
-    #print("AP", round(angle_proxy))
 
 
     if (index_knuckle.x - thumb_tip.x > 0.05) and abs(angle) < (90-threshold_angle):
